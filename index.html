@@ -658,6 +658,12 @@
                                                                         <div style="margin-bottom: 10px">
                             <div style="color: #b2b2b2;">Nama</div>
                             <div id="qrGuestName">Nama Tamu</div>
+                            <button onclick="downloadCheckInCard()" class="btn btn-primary rounded-pill mt-3 w-100" style="font-size: 13px; font-weight: bold; padding: 8px 16px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16" style="vertical-align: text-bottom; margin-right: 6px;">
+                                  <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                  <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                </svg>Download Kartu Check-In
+                            </button>
                         </div>
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     </div>
                     <button onclick="closeModal(qrModal)" type="button" class="btn btn-close"><svg xmlns="http://www.w3.org/2000/svg" height="42px" width="42px" fill="none" viewbox="0 0 24 24" stroke="currentColor">
@@ -964,6 +970,92 @@
                     submitBtn.textContent = originalBtnText;
                 });
             });
+        }
+
+        function downloadCheckInCard() {
+            var guestName = "Tamu Undangan";
+            var hash = window.location.hash;
+            var match = hash.match(/[#&]?to=([^&]*)/);
+            if (match && match[1]) {
+                guestName = decodeURIComponent(match[1]);
+            }
+            
+            // Create a temporary canvas
+            var canvas = document.createElement('canvas');
+            canvas.width = 350;
+            canvas.height = 480;
+            var ctx = canvas.getContext('2d');
+            
+            // Fill background with white
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Load cover image (maps.jpeg)
+            var imgCover = new Image();
+            imgCover.src = 'maps.jpeg';
+            imgCover.onload = function() {
+                var targetW = 350;
+                var targetH = 197; // 350 * 9 / 16
+                
+                var imgW = imgCover.width;
+                var imgH = imgCover.height;
+                
+                var sWidth = imgW;
+                var sHeight = imgW * 9 / 16;
+                if (sHeight > imgH) {
+                    sHeight = imgH;
+                    sWidth = imgH * 16 / 9;
+                }
+                var sx = (imgW - sWidth) / 2;
+                var sy = (imgH - sHeight) * 0.15; // match background-position center 15%
+                
+                ctx.drawImage(imgCover, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
+                
+                // Draw a light grey dashed divider line
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(20, 410);
+                ctx.lineTo(330, 410);
+                ctx.stroke();
+                ctx.setLineDash([]); // reset line dash
+                
+                // Load QR Code image
+                var imgQr = new Image();
+                imgQr.crossOrigin = "anonymous";
+                imgQr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(guestName);
+                imgQr.onload = function() {
+                    var qrSize = 180;
+                    var qrX = (350 - qrSize) / 2;
+                    var qrY = targetH + 18;
+                    ctx.drawImage(imgQr, qrX, qrY, qrSize, qrSize);
+                    
+                    // Draw Texts
+                    ctx.textAlign = 'center';
+                    
+                    // "Nama" label
+                    ctx.fillStyle = '#b2b2b2';
+                    ctx.font = '12px sans-serif';
+                    ctx.fillText('Nama', 175, 432);
+                    
+                    // Guest Name
+                    ctx.fillStyle = '#111111';
+                    ctx.font = 'bold 16px sans-serif';
+                    ctx.fillText(guestName, 175, 455);
+                    
+                    // Trigger download
+                    var link = document.createElement('a');
+                    link.download = 'Kartu_CheckIn_' + guestName.replace(/\s+/g, '_') + '.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                };
+                imgQr.onerror = function() {
+                    alert('Gagal memuat QR Code untuk diunduh. Pastikan koneksi internet aktif.');
+                };
+            };
+            imgCover.onerror = function() {
+                alert('Gagal memuat gambar latar belakang.');
+            };
         }
 
         function escapeHtml(str) {
