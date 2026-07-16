@@ -631,8 +631,7 @@ for (var i = 0; i < btnRsvp.length; i++) {
   }
 }
 
-// Triger aninmasi saat di scroll
-// Pilih semua elemen dengan class animate__animated
+// Triger aninmasi saat di scroll dengan IntersectionObserver (performa smooth tanpa lag)
 var animatedElements = document.querySelectorAll(".animate__animated");
 
 // Hapus class animasi agar tidak langsung berjalan saat halaman dimuat
@@ -653,30 +652,57 @@ animatedElements.forEach(function (element) {
   }
 });
 
-// Fungsi untuk memeriksa apakah elemen visible saat scroll
-function checkIfInView() {
+// Gunakan IntersectionObserver untuk animasi saat scroll agar mulus dan bebas lag
+if ('IntersectionObserver' in window) {
+  var observerOptions = {
+    root: null,
+    rootMargin: "0px 0px 30px 0px",
+    threshold: 0.01
+  };
+  var observer = new IntersectionObserver(function (entries, observerInstance) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        var element = entry.target;
+        var animationClass = element.getAttribute("data-animation") || "";
+        if (animationClass) {
+          var _element$classList2;
+          (_element$classList2 = element.classList).add.apply(_element$classList2, _toConsumableArray(animationClass.split(" ").filter(function (cls) {
+            return cls.trim() !== "";
+          })));
+        }
+        observerInstance.unobserve(element);
+      }
+    });
+  }, observerOptions);
+
   animatedElements.forEach(function (element) {
-    var elementTop = element.getBoundingClientRect().top;
-    var elementBottom = element.getBoundingClientRect().bottom;
-    var isVisible = elementTop < window.innerHeight + 30 && elementBottom > 1;
-    // const isVisible = (elementTop < window.innerHeight) && (elementBottom > 0);
-
-    if (isVisible) {
-      var _element$classList2;
-      // Ambil class animasi dari data attribute
-      var animationClass = element.getAttribute("data-animation") || "";
-      (_element$classList2 = element.classList).add.apply(_element$classList2, _toConsumableArray(animationClass.split(" ").filter(function (cls) {
-        return cls.trim() !== "";
-      })));
-    }
+    observer.observe(element);
   });
+} else {
+  // Fallback untuk browser lawas (dengan throttling requestAnimationFrame)
+  var rAFTimeout;
+  var checkIfInView = function checkIfInView() {
+    if (rAFTimeout) {
+      window.cancelAnimationFrame(rAFTimeout);
+    }
+    rAFTimeout = window.requestAnimationFrame(function () {
+      animatedElements.forEach(function (element) {
+        var elementTop = element.getBoundingClientRect().top;
+        var elementBottom = element.getBoundingClientRect().bottom;
+        var isVisible = elementTop < window.innerHeight + 30 && elementBottom > 1;
+        if (isVisible) {
+          var _element$classList2;
+          var animationClass = element.getAttribute("data-animation") || "";
+          (_element$classList2 = element.classList).add.apply(_element$classList2, _toConsumableArray(animationClass.split(" ").filter(function (cls) {
+            return cls.trim() !== "";
+          })));
+        }
+      });
+    });
+  };
+  window.addEventListener("scroll", checkIfInView, { passive: true });
+  checkIfInView();
 }
-
-// Jalankan saat scroll
-window.addEventListener("scroll", checkIfInView);
-
-// Jalankan sekali saat halaman dimuat
-checkIfInView();
 
 // open invitation
 var invitationOpened = false;
